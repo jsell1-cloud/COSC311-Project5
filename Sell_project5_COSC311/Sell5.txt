@@ -1,0 +1,73 @@
+.orig x3000
+
+	LD R4, ARRAY
+
+
+input_loop
+	lea r0, prompt
+	puts
+        getc            	; read a character from kbd
+        out        		; echo to terminal
+	ld r1, zero_const  	; Load ASCII '0' (x30) into r1
+        not r1, r1         	; Invert r1
+        add r1, r1, #1     	; Two's complement to negate r1
+        add r2, r0, r1     	; Subtract ASCII '0' from r0
+        brz end_of_loop		; Ends the loop when input has finished
+        str r0,r4,#0    	; store the characrter just read
+        add r4,r4,#1
+	add r6, r6, #1
+	
+        brnzp input_loop     
+end_of_loop
+
+
+
+STARTUP                       ; Initialize pointers and variables
+        LD R0, ARRAY          ; R0 holds array's start address
+        ADD R1, R6, #0
+        LDR R2, R0, #0        ; Load the first number into R2 (assume it’s the smallest initially)
+        ADD R3, R0, #0        ; R3 holds the address of the smallest number found
+        ADD R4, R0, #0        ; R4 is used to keep track of the current address in the loop
+	ST R6, SAFE
+	BRnzp FIND_MIN
+
+PREREQ  
+	LD R6, SAFE
+        ADD R6, R6, #-1       ; Decrement R7 for each run (runs 10 times)
+	BRz ENDPOINT
+	ADD R0, R0, #1        ; Increment 0 by 1 to sort the next index
+	LDR R2, R0, #0        ; Reset R2
+	ADD R3, R0, #0        ; Reset R3
+        ADD R4, R0, #0        ; Reset R4
+	ADD R1, R6, #0	      ; Set the number of runs (1) to the number in 7
+	ST R6, SAFE
+	BR FIND_MIN
+
+FIND_MIN
+        ADD R1, R1, #-1       ; Counter -1
+        BRz SWAP              ; If counter reaches 0, go to SWAP
+        ADD R4, R4, #1        ; Move to the next element by adding one to the address in R4
+        LDR R5, R4, #0        ; Load the next number into R5 (R4 now points to the next address)
+        NOT R6, R2            ; R6 = -current smallest number
+        ADD R6, R6, R5        ; Check if R5 < R2
+        BRzp FIND_MIN         ; If not smaller, continue to next iteration
+        ADD R2, R5, #0        ; Update smallest number to R5
+        ADD R3, R4, #0        ; Update smallest number's location to current address
+        BR FIND_MIN          ; Loop to continue checking
+
+SWAP
+        LDR R5, R0, #0        ; Load original value at start
+        STR R2, R0, #0        ; Place the smallest number at the start of ARRAY
+        STR R5, R3, #0        ; Move this original value to the location of the smallest number
+	BR PREREQ
+
+ENDPOINT
+	HALT
+
+
+prompt .stringz "\nEnter a number:"
+zero_const    .fill      x30
+ARRAY   .fill x7000 ;   
+SAFE    .fill x6000 ;       
+
+.end
